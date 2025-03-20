@@ -84,7 +84,7 @@ const QRScanner = () => {
     // Use window.location.origin for the base URL
     const baseUrl = window.location.origin;
     // Create the full URL for the QR code
-    return `${baseUrl}/menu?table=${tableNumber}`;
+    return `${baseUrl}/scan-qr?table=${tableNumber}`;
   };
 
   // Fetch menu items with categories
