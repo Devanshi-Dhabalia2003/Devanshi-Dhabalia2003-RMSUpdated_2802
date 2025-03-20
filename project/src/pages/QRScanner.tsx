@@ -24,21 +24,29 @@ const QRScanner = () => {
   useEffect(() => {
     const fetchTablesAndCheckQR = async () => {
       try {
-        const { data, error } = await supabase
+        // Check for table parameter in URL first
+        const tableNumber = searchParams.get('table');
+        
+        const { data: tablesData, error } = await supabase
           .from('tables')
           .select('*')
-          .eq('status', 'available');
+          .order('table_number');
         
         if (error) throw error;
-        setTables(data || []);
+        
+        // Filter available tables
+        const availableTables = tablesData.filter((t: any) => t.status === 'available');
+        setTables(availableTables || []);
 
-        // Check for table parameter in URL
-        const tableNumber = searchParams.get('table');
-        if (tableNumber && data) {
-          const selectedTable = data.find((t: any) => t.table_number === tableNumber);
+        // If we have a table number from QR code, find and select it
+        if (tableNumber && tablesData) {
+          const selectedTable = tablesData.find((t: any) => t.table_number.toString() === tableNumber);
           if (selectedTable) {
-            handleTableSelection(selectedTable);
-            navigate('/qr-scanner', { replace: true }); // Clean URL after selection
+            await handleTableSelection(selectedTable);
+            // Clean URL but maintain history
+            navigate('/menu', { replace: true });
+          } else {
+            toast.error('Table not found or unavailable');
           }
         }
       } catch (error) {
@@ -48,38 +56,35 @@ const QRScanner = () => {
     };
 
     fetchTablesAndCheckQR();
-  }, []);
+  }, [searchParams]);
 
-  // Handle QR scan
-  const handleQRScan = async (qrData: { data: string }) => {
+  // Handle table selection
+  const handleTableSelection = async (table: any) => {
     try {
-      // Extract table ID from QR code data
-      const tableNumber = qrData.data.split('_')[1];
-      
-      const { data, error } = await supabase
+      // Update table status to occupied
+      const { error: updateError } = await supabase
         .from('tables')
-        .select('*')
-        .eq('table_number', tableNumber)
-        .single();
+        .update({ status: 'occupied' })
+        .eq('id', table.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      setTableId(data.id);
-      setScanning(false);
-      toast.success(`Connected to Table ${data.table_number}`);
+      setTableId(table.id);
+      setTables(prev => prev.filter(t => t.id !== table.id));
+      toast.success(`Connected to Table ${table.table_number}`);
+      await fetchMenuItems();
     } catch (error) {
-      console.error('Error processing QR code:', error);
-      toast.error('Invalid QR code');
-      setScanning(false);
+      console.error('Error selecting table:', error);
+      toast.error('Failed to select table');
     }
   };
 
-  // Handle table selection
-  const handleTableSelection = (table: any) => {
-    setTableId(table.id);
-    setTables(prev => prev.filter(t => t.id !== table.id));
-    toast.success(`Table ${table.table_number} selected`);
-    fetchMenuItems();
+  // Generate QR code URL
+  const generateQRUrl = (tableNumber: string) => {
+    // Use window.location.origin for the base URL
+    const baseUrl = window.location.origin;
+    // Create the full URL for the QR code
+    return `${baseUrl}/menu?table=${tableNumber}`;
   };
 
   // Fetch menu items with categories
@@ -173,7 +178,7 @@ const QRScanner = () => {
     }
   };
 
-  // Updated payment success handler
+  // Handle payment success
   const handlePaymentSuccess = async (details: any) => {
     try {
       if (!currentOrder) throw new Error('No active order');
@@ -191,7 +196,7 @@ const QRScanner = () => {
 
       if (error) throw error;
 
-      // Send confirmation email ONLY after successful payment
+      // Send confirmation email
       sendOrderConfirmationEmail(user.email, currentOrder);
 
       // Clear cart and navigate
@@ -210,7 +215,6 @@ const QRScanner = () => {
   };
 
   const sendOrderConfirmationEmail = (userEmail: string, order: any) => {
-    // Generate order items table
     const orderItemsTable = `
       <table class="order-table" style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
         <thead>
@@ -246,10 +250,9 @@ const QRScanner = () => {
       hotel_name: "Your Hotel Name",
       hotel_address: "Hotel Address",
       hotel_contact: "+91-XXXXXXXXXX",
-      order_items_table: orderItemsTable, // Table is sent as HTML
+      order_items_table: orderItemsTable,
     };
     
-  
     emailjs
       .send(
         "service_o51ew0e",
@@ -274,30 +277,10 @@ const QRScanner = () => {
           <div className="max-w-3xl mx-auto">
             <div className="bg-white rounded-lg shadow px-6 py-8 text-center">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Scan Table QR Code to Start Ordering
+                Scan Table QR Code or Select a Table
               </h2>
               
               <div className="space-y-6">
-                <div className="border-4 border-dashed border-gray-200 rounded-lg h-64 flex items-center justify-center">
-                  {scanning ? (
-                    <div className="text-gray-500">Scanning...</div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setScanning(true);
-                        // Simulate QR scan for development
-                        setTimeout(() => {
-                          handleQRScan({ data: 'table_1' });
-                        }, 1000);
-                      }}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      <QrCode className="h-5 w-5 mr-2" />
-                      Start Scanning
-                    </button>
-                  )}
-                </div>
-
                 <div className="mt-8">
                   <h3 className="text-xl font-medium text-gray-900 mb-4">
                     Available Tables
@@ -308,7 +291,7 @@ const QRScanner = () => {
                         <div key={table.id} className="text-center">
                           <div className="bg-white p-2 rounded-lg mb-2">
                             <QRCode
-                              value={`${window.location.origin}/qr-scanner?table=${table.table_number}`}
+                              value={generateQRUrl(table.table_number.toString())}
                               size={128}
                             />
                           </div>
@@ -435,7 +418,7 @@ const QRScanner = () => {
                       />
                       <button
                         onClick={() => setShowPayPal(false)}
-                        className="w-full text-white-600 underline hover:text-white-800 text-sm"
+                        className="w-full text-gray-600 underline hover:text-gray-800 text-sm"
                       >
                         Cancel Payment
                       </button>
