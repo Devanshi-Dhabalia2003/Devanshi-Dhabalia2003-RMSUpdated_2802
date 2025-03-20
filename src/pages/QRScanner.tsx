@@ -68,7 +68,6 @@ const QRScanner = () => {
       setTableId(data.id);
       setScanning(false);
       toast.success(`Connected to Table ${data.table_number}`);
-      await fetchMenuItems(); // Fetch menu items after table selection
     } catch (error) {
       console.error('Error processing QR code:', error);
       toast.error('Invalid QR code');
@@ -108,7 +107,7 @@ const QRScanner = () => {
     setTableId(table.id);
     setTables(prev => prev.filter(t => t.id !== table.id));
     toast.success(`Table ${table.table_number} selected`);
-    await fetchMenuItems(); // Fetch menu items after table selection
+    await fetchMenuItems();
   };
 
   // Fetch menu items with categories
