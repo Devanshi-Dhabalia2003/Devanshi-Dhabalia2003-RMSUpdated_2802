@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -52,10 +51,10 @@ const QRScanner = () => {
   }, []);
 
   // Handle QR scan
-  const handleQRScan = async (decodedText: string) => {
+  const handleQRScan = async (qrData: { data: string }) => {
     try {
       // Extract table ID from QR code data
-      const tableNumber = decodedText.split('_')[1];
+      const tableNumber = qrData.data.split('_')[1];
       
       const { data, error } = await supabase
         .from('tables')
@@ -68,7 +67,6 @@ const QRScanner = () => {
       setTableId(data.id);
       setScanning(false);
       toast.success(`Connected to Table ${data.table_number}`);
-      await fetchMenuItems(); // Fetch menu items after table selection
     } catch (error) {
       console.error('Error processing QR code:', error);
       toast.error('Invalid QR code');
@@ -76,39 +74,12 @@ const QRScanner = () => {
     }
   };
 
-  // Initialize QR scanner
-  useEffect(() => {
-    if (scanning) {
-      const scanner = new Html5QrcodeScanner(
-        'qr-scanner', // ID of the HTML element to render the scanner
-        {
-          fps: 10, // Frames per second
-          qrbox: 250, // Size of the scanning box
-        },
-        false // Verbose mode (set to true for debugging)
-      );
-
-      scanner.render(handleQRScan, (error: any) => {
-        console.error('QR scan error:', error);
-        toast.error('Failed to scan QR code');
-        setScanning(false);
-      });
-
-      // Cleanup scanner on unmount
-      return () => {
-        scanner.clear().catch((error: any) => {
-          console.error('Failed to clear scanner:', error);
-        });
-      };
-    }
-  }, [scanning]);
-
   // Handle table selection
-  const handleTableSelection = async (table: any) => {
+  const handleTableSelection = (table: any) => {
     setTableId(table.id);
     setTables(prev => prev.filter(t => t.id !== table.id));
     toast.success(`Table ${table.table_number} selected`);
-    await fetchMenuItems(); // Fetch menu items after table selection
+    fetchMenuItems();
   };
 
   // Fetch menu items with categories
@@ -309,10 +280,16 @@ const QRScanner = () => {
               <div className="space-y-6">
                 <div className="border-4 border-dashed border-gray-200 rounded-lg h-64 flex items-center justify-center">
                   {scanning ? (
-                    <div id="qr-scanner" style={{ width: '100%' }} />
+                    <div className="text-gray-500">Scanning...</div>
                   ) : (
                     <button
-                      onClick={() => setScanning(true)}
+                      onClick={() => {
+                        setScanning(true);
+                        // Simulate QR scan for development
+                        setTimeout(() => {
+                          handleQRScan({ data: 'table_1' });
+                        }, 1000);
+                      }}
                       className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
                     >
                       <QrCode className="h-5 w-5 mr-2" />
@@ -331,7 +308,7 @@ const QRScanner = () => {
                         <div key={table.id} className="text-center">
                           <div className="bg-white p-2 rounded-lg mb-2">
                             <QRCode
-                              value={`${window.location.origin}/scan-qr?table=${table.table_number}`}
+                              value={`${window.location.origin}/qr-scanner?table=${table.table_number}`}
                               size={128}
                             />
                           </div>
