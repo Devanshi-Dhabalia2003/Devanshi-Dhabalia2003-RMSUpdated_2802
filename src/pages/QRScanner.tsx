@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import PayPalButton from '../components/PayPalButton';
 import emailjs from '@emailjs/browser';
 import QRCode from 'react-qr-code';
-import { QrCode, ShoppingCart } from 'lucide-react';
 
 const QRScanner = () => {
   const { isAuthenticated, supabase, user } = useAuth();
-  const [scanning, setScanning] = useState(false);
   const [tableId, setTableId] = useState<string | null>(null);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
@@ -51,80 +48,22 @@ const QRScanner = () => {
     fetchTablesAndCheckQR();
   }, []);
 
-  // Handle QR scan
-  const handleQRScan = async (decodedText: string) => {
-    try {
-      // Extract table ID from QR code data
-      const tableNumber = decodedText.split('_')[1];
-      
-      const { data, error } = await supabase
-        .from('tables')
-        .select('*')
-        .eq('table_number', tableNumber)
-        .single();
-
-      if (error) throw error;
-
-      setTableId(data.id);
-      setScanning(false);
-      toast.success(`Connected to Table ${data.table_number}`);
-    } catch (error) {
-      console.error('Error processing QR code:', error);
-      toast.error('Invalid QR code');
-      setScanning(false);
-    }
-  };
-
-  // Initialize QR scanner
-  useEffect(() => {
-    if (scanning) {
-      const scanner = new Html5QrcodeScanner(
-        'qr-scanner', // ID of the HTML element to render the scanner
-        {
-          fps: 10, // Frames per second
-          qrbox: 250, // Size of the scanning box
-        },
-        false // Verbose mode (set to true for debugging)
-      );
-
-      scanner.render(handleQRScan, (error: any) => {
-        console.error('QR scan error:', error);
-        toast.error('Failed to scan QR code');
-        setScanning(false);
-      });
-
-      // Cleanup scanner on unmount
-      return () => {
-        scanner.clear().catch((error: any) => {
-          console.error('Failed to clear scanner:', error);
-        });
-      };
-    }
-  }, [scanning]);
-
   // Handle table selection
-  const handleTableSelection = async (table: any) => {
+  const handleTableSelection = (table: any) => {
     setTableId(table.id);
     setTables(prev => prev.filter(t => t.id !== table.id));
     toast.success(`Table ${table.table_number} selected`);
-    await fetchMenuItems();
+    fetchMenuItems();
   };
 
-  // Fetch menu items with categories
+  // Fetch menu items
   const fetchMenuItems = async () => {
     try {
       const { data, error } = await supabase
         .from('menu_items')
-        .select(`
-          *,
-          category:category_id (
-            name,
-            sort_order
-          )
-        `)
-        .eq('is_available', true)
-        .order('category_id');
-
+        .select('*')
+        .eq('is_available', true);
+      
       if (error) throw error;
       setMenuItems(data || []);
     } catch (error) {
@@ -145,12 +84,11 @@ const QRScanner = () => {
   };
 
   // Update item quantity in cart
-  const updateQuantity = (itemId: number, quantity: number) => {
-    if (quantity < 1) return;
+  const updateQuantity = (itemId: number, delta: number) => {
     setCart(prev =>
       prev.map(item =>
         item.id === itemId
-          ? { ...item, quantity }
+          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
           : item
       )
     );
@@ -292,6 +230,7 @@ const QRScanner = () => {
       });
   };
   
+  
   // Redirect to login if not authenticated
   if (!isAuthenticated) return <Navigate to="/login" />;
 
@@ -305,47 +244,31 @@ const QRScanner = () => {
                 Scan Table QR Code to Start Ordering
               </h2>
               
-              <div className="space-y-6">
-                <div className="border-4 border-dashed border-gray-200 rounded-lg h-64 flex items-center justify-center">
-                  {scanning ? (
-                    <div id="qr-scanner" style={{ width: '100%' }} />
-                  ) : (
-                    <button
-                      onClick={() => setScanning(true)}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      <QrCode className="h-5 w-5 mr-2" />
-                      Start Scanning
-                    </button>
-                  )}
-                </div>
-
-                <div className="mt-8">
-                  <h3 className="text-xl font-medium text-gray-900 mb-4">
-                    Available Tables
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                    {tables.length > 0 ? (
-                      tables.map(table => (
-                        <div key={table.id} className="text-center">
-                          <div className="bg-white p-2 rounded-lg mb-2">
-                            <QRCode
-                              value={`${window.location.origin}/scan-qr?table=${table.table_number}`}
-                              size={128}
-                            />
-                          </div>
-                          <button
-                            onClick={() => handleTableSelection(table)}
-                            className="btn-primary"
-                          >
-                            Table {table.table_number}
-                          </button>
+              <div className="mt-8">
+                <h3 className="text-xl font-medium text-gray-900 mb-4">
+                  Available Tables
+                </h3>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                  {tables.length > 0 ? (
+                    tables.map(table => (
+                      <div key={table.id} className="text-center">
+                        <div className="bg-white p-2 rounded-lg mb-2">
+                          <QRCode
+                            value={`${window.location.origin}/qr-scanner?table=${table.table_number}`}
+                            size={128}
+                          />
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-gray-500">No tables available</p>
-                    )}
-                  </div>
+                        <button
+                          onClick={() => handleTableSelection(table)}
+                          className="btn-primary"
+                        >
+                          Table {table.table_number}
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500">No tables available</p>
+                  )}
                 </div>
               </div>
             </div>
