@@ -4,7 +4,7 @@ import { toast } from "react-hot-toast";
 import { Navigate } from "react-router-dom";
 import { Calendar, Clock, Users, Info } from "lucide-react";
 import Modal from "../components/Modal";
-import emailjs from "@emailjs/browser";
+import emailjs from 'emailjs-com';
 
 const TableBooking = () => {
   const { user, isAuthenticated, supabase } = useAuth();
@@ -65,69 +65,32 @@ const TableBooking = () => {
     }
   };
 
-const sendBookingConfirmationEmail = (userEmail: string, booking: any) => {
-  // Validate email format
-  if (!userEmail || !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(userEmail)) {
-    console.error('Invalid email format:', userEmail);
-    toast.error('Please use a valid email address');
-    return;
-  }
+  const sendEmail = async (reservation) => {
+    const templateParams = {
+      to_name: user.email,
+      from_name: "Your Restaurant Name",
+      reservation_date: formData.reservation_date,
+      reservation_time: formData.reservation_time,
+      table_number: selectedTable.table_number,
+      guests: formData.guests,
+      special_requests: formData.special_requests,
+    };
 
-  // Convert all values to strings
-  const emailParams = {
-    table_number: String(booking.table?.table_number || 'N/A'),
-    reservation_date: formatDate(booking.reservation_date),
-    reservation_time: `${formatTime(new Date(`${booking.reservation_date}T${booking.reservation_time}`))} - ${formatTime(new Date(`${booking.reservation_date}T${booking.reservation_time}`).getTime() + 90 * 60000)}`,
-    guests: String(booking.guests),
-    special_requests: booking.special_requests ? 
-      booking.special_requests.replace(/</g, '&lt;').replace(/>/g, '&gt;') : 
-      'None',
-    restaurant_name: "FineDine Restaurant",
-    manage_booking_link: `${window.location.origin}/bookings/${booking.id}`,
-    to_email: userEmail,
-    user_name: user?.user_metadata?.full_name?.trim() || "Valued Guest",
-    booking_id: booking.id ? String(booking.id) : 'N/A'
+    try {
+      await emailjs.send(
+        'service_o51ew0e', // Replace with your EmailJS service ID
+        'template_gpv02pb', // Replace with your EmailJS template ID
+        templateParams,
+        'Wq9LPEIYq_4-UHOkQ' // Replace with your EmailJS user ID
+      );
+      toast.success("Confirmation email sent successfully!");
+    } catch (error) {
+      console.error("Failed to send email:", error);
+      toast.error("Failed to send confirmation email");
+    }
   };
 
-  // Validate required parameters
-  const requiredParams = [
-    'table_number', 
-    'reservation_date',
-    'reservation_time',
-    'guests',
-    'to_email',
-    'booking_id'
-  ];
-  
-  const missingParams = requiredParams.filter(param => !emailParams[param]);
-  if (missingParams.length > 0) {
-    console.error('Missing required parameters:', missingParams);
-    toast.error('Failed to send confirmation - missing data');
-    return;
-  }
-
-  // Send email with error prevention
-  emailjs
-    .send(
-      "service_o51ew0e",
-      "template_gpv02pb",
-      emailParams,
-      "Wq9LPEIYq_4-UHOkQ"
-    )
-    .then(() => toast.success("Confirmation sent successfully 📨"))
-    .catch((error) => {
-      console.error("EmailJS Failure Report:", {
-        Status: error.status,
-        Code: error.text,
-        Parameters: {
-          ...emailParams,
-          special_requests: emailParams.special_requests.substring(0, 30)
-        },
-        User: user?.id
-      });
-      toast.error("Failed to send email - check console for details");
-    });
-};  const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedTable) {
       toast.error("Please select a table first");
@@ -198,8 +161,6 @@ const sendBookingConfirmationEmail = (userEmail: string, booking: any) => {
           },
         ]);
 
-      sendBookingConfirmationEmail(user.email, { ...reservation, table: selectedTable });
-
       fetchUserBookings();
 
       setFormData({
@@ -211,6 +172,9 @@ const sendBookingConfirmationEmail = (userEmail: string, booking: any) => {
       setSelectedTable(null);
 
       toast.success("Table booked successfully!");
+
+      // Send email confirmation
+      await sendEmail(reservation);
     } catch (error) {
       console.error("Booking error:", error);
       toast.error(error.message || "Failed to book table");
