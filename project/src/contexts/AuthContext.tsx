@@ -8,6 +8,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  loading: boolean; // Add loading state
 }
 
 const supabase = createClient(
@@ -20,8 +21,34 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true); // Add loading state
 
   useEffect(() => {
+    const initializeAuth = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error fetching session:', error);
+        setLoading(false); // Set loading to false even if there's an error
+        return;
+      }
+
+      if (session?.user) {
+        setUser(session.user);
+        setIsAuthenticated(true);
+        if (!localStorage.getItem('toastShown')) {
+          toast.success(`Welcome back, ${session.user.email}!`);
+          localStorage.setItem('toastShown', 'true');
+        }
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+        localStorage.removeItem('toastShown');
+      }
+      setLoading(false); // Set loading to false after initialization
+    };
+
+    initializeAuth();
+
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user);
@@ -61,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, supabase, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, supabase, login, logout, isAuthenticated, loading }}>
       {children}
     </AuthContext.Provider>
   );
