@@ -1,22 +1,19 @@
+// vite.config.ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  optimizeDeps: {
-    exclude: ['lucide-react'],
-  },
   server: {
-    host: true,  // Ensure external access if needed
-    port: 5173,  // Set to 5173 as you want
-    strictPort: true,  // Ensures it uses the exact port
+    host: true,
+    port: 5173,
+    strictPort: true,
     hmr: {
-      clientPort: 443,  // Custom HMR port
+      clientPort: 5173,  // Must match server port
     },
   },
   preview: {
-    port: 5173,  // Ensure preview also runs on port 5173
+    port: 5173,
     strictPort: true,
-    host: true,
   }
 });

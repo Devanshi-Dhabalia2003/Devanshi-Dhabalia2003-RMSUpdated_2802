@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Menu, Home, User, LogOut, LogIn, UtensilsCrossed, ChevronDown } from 'lucide-react';
+import {
+  Menu,
+  Home,
+  User,
+  LogOut,
+  LogIn,
+  UtensilsCrossed,
+  ChevronDown,
+  Info,
+  PhoneCall
+} from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import { toast } from 'react-hot-toast';
 
@@ -14,13 +24,10 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      // Show success toast message
       toast.success('Logged out successfully!');
-      // Redirect to login page
       navigate('/login');
     } catch (error) {
       console.error('Error logging out:', error);
-      // Show error toast message
       toast.error('Failed to log out. Please try again.');
     }
   };
@@ -29,10 +36,8 @@ const Navbar = () => {
     setIsDropdownOpen(!isDropdownOpen);
   };
 
-  // Check if the current route is /login or /register
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
-  // Render only the ThemeToggle on /login and /register pages
   if (isAuthPage) {
     return (
       <div className="fixed top-0 right-0 p-4 z-50">
@@ -41,7 +46,6 @@ const Navbar = () => {
     );
   }
 
-  // Render the full navbar for other pages
   return (
     <nav className="fixed top-0 left-0 w-full bg-white dark:bg-gray-800 shadow-lg z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -63,6 +67,7 @@ const Navbar = () => {
               <Home className="h-5 w-5" />
               <span className="hidden sm:inline">Home</span>
             </Link>
+
             <Link
               to="/menu"
               className="flex items-center space-x-1 text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition duration-200"
@@ -71,20 +76,34 @@ const Navbar = () => {
               <span className="hidden sm:inline">Menu</span>
             </Link>
 
+            <Link
+                to="/about"
+                className="flex items-center space-x-1 text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition duration-200"
+                  >
+              <Info className="h-5 w-5" />
+              <span className="hidden sm:inline">About Us</span>
+              </Link>
+
+            <Link
+              to="/contact"
+                className="flex items-center space-x-1 text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition duration-200"
+                >
+              <PhoneCall className="h-5 w-5" />
+              <span className="hidden sm:inline">Contact</span>
+            </Link>
+
             {/* Conditional Rendering for Authenticated Users */}
             {isAuthenticated ? (
               <>
-                {/* Dashboard Link (Visible only for Admin) */}
                 {user?.user_metadata?.role === 'admin' && (
                   <Link
                     to="/dashboard"
-                    className="flex items-center space-x-1 text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition duration-200"
+                    className="text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition duration-200 hidden sm:inline"
                   >
-                    <span className="hidden sm:inline">Dashboard</span>
+                    Dashboard
                   </Link>
                 )}
 
-                {/* User Dropdown Toggle */}
                 <div className="relative">
                   <button
                     onClick={toggleDropdown}
@@ -102,7 +121,6 @@ const Navbar = () => {
                     <ChevronDown className="h-4 w-4 text-gray-700 dark:text-gray-200" />
                   </button>
 
-                  {/* Dropdown Menu */}
                   {isDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg z-50">
                       <div className="py-1">
@@ -119,7 +137,6 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              // Login Link for Unauthenticated Users
               <Link
                 to="/login"
                 className="flex items-center space-x-1 text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition duration-200"
@@ -129,13 +146,11 @@ const Navbar = () => {
               </Link>
             )}
 
-            {/* Theme Toggle */}
             <ThemeToggle />
           </div>
         </div>
       </div>
 
-      {/* Close dropdown when clicking outside */}
       {isDropdownOpen && (
         <div
           className="fixed inset-0 z-40"

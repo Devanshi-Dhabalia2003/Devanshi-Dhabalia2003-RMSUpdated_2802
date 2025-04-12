@@ -18,6 +18,10 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { Chatbot } from './components/Chatbot/Chatbot';
 import OrderConfirmation from './pages/OrderConfirmation';
 import OAuthCallback from './components/OAuthCallback';
+import AboutPage from './pages/AboutPage';
+import ContactPage from './pages/ContactPage';
+import OrderTracking from './components/OrderTracking';
+
 
 function AppContent() {
   const { supabase } = useAuth();
@@ -44,6 +48,8 @@ function AppContent() {
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin/*" element={<AdminDashboard />} />
+          <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
           <Route path="/staff" element={<StaffDashboard />} />
           <Route path="/chef" element={<ChefDashboard />} />
           <Route path="/menu" element={<MenuPage />} />
@@ -51,6 +57,7 @@ function AppContent() {
           <Route path="/scan-qr" element={<QRScanner />} />
           <Route path="/admin/menu" element={<MenuManagement />} />
           <Route path="/order-confirmation" element={<OrderConfirmation />} />
+		    <Route path="/track-order" element={<OrderTracking showSearch />} />
           <Route path="/dashboard" element={<OAuthCallback />} />
         </Routes>
         <Toaster position="top-center" toastOptions={{ className: 'dark:bg-gray-800 dark:text-white' }} />

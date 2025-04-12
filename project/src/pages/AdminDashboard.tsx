@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { BarChart3, Users, Table as TableIcon, DollarSign, Settings, UtensilsCrossed } from 'lucide-react';
+import { BarChart3, Users, Table as TableIcon, DollarSign, Settings, UtensilsCrossed, Package } from 'lucide-react';
 import RevenueChart from '../components/RevenueChart';
 import StaffManagement from '../components/StaffManagement';
 import MenuManagement from './admin/MenuManagement';
 import TableManagement from './admin/TableManagement';
+import OrderTracking from '../components/OrderTracking';
 
 const AdminDashboard = () => {
   const { user, supabase } = useAuth();
@@ -181,6 +182,17 @@ const AdminDashboard = () => {
               <TableIcon className="mr-2 h-5 w-5" />
               Tables
             </Link>
+            <Link
+              to="/admin/orders"
+              className={`${
+                location.pathname === '/admin/orders'
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              } flex items-center whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              <Package className="mr-2 h-5 w-5" />
+              Order Tracking
+            </Link>
           </nav>
         </div>
 
@@ -270,6 +282,7 @@ const AdminDashboard = () => {
           } />
           
           <Route path="/tables" element={<TableManagement />} />
+          <Route path="/orders" element={<OrderTracking />} />
         </Routes>
       </div>
     </div>
